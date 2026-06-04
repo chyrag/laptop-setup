@@ -1,0 +1,160 @@
+# ~/.config/starship.toml
+
+command_timeout = 2000
+add_newline = true
+
+## $os(bg:#030B16 fg:blue)\
+# format = """
+# [$os ](bg:#030B16 fg:blue)\
+# $username$hostname$directory$git_branch$git_status$kubernetes$aws$battery$cmd_duration
+# $character
+# """
+
+format = """
+$os \
+[ ](bg:#9A348E)\
+$username\
+[ ](bg:#9A348E)\
+[](bg:#9A348E fg:#DA627D)\
+[ ](bg:#DA627D)\
+$hostname\
+[ ](bg:#DA627D)\
+[](fg:#DA627D bg:#1C3A5E)\
+$time\
+[](fg:blue bg:#1C3A5E)\
+$directory\
+[](fg:blue bg:none)\
+$git_branch\
+$git_status\
+$kubernetes\
+$aws\
+$battery \
+$cmd_duration\
+$line_break\
+$character
+"""
+
+[os]
+format = "[$symbol](bg: bold white)"
+disabled = false
+
+# #   ☸\n
+[os.symbols]
+Debian = ""
+Macos = ""
+Ubuntu = "'"
+
+[username]
+format = "[$user](bg:#9A348E fg:bright-white)"
+disabled = false
+show_always = true
+
+[hostname]
+ssh_only = false
+format = '[$hostname](bg:#DA627D fg:bright-white)'
+trim_at = "."
+disabled = false
+
+[directory]
+format = "[ $path ](bg:blue fg:bright-white)"
+
+[git_branch]
+# format = "[  $branch ](bg:#86BBD8)[](fg:#86BBD8)"
+format = "  $branch "
+
+[git_status]
+style = "bold-#DA627D"
+# style = "bright-white"
+conflicted = "⚔️ "
+ahead = "💨${count} "
+behind = "🐢${count} "
+diverged = "🔱 💨${ahead_count} 🐢${behind_count} "
+untracked = "🛤️${count} "
+stashed = "📦${count} "
+modified = "📝${count} "
+staged = "🗃️ ${count} "
+renamed = "📛${count} "
+deleted = "🗑️ ${count} "
+format = ' $all_status$ahead_behind '
+
+[kubernetes]
+# disabled = false
+disabled = true
+symbol = "⎈ "
+format = 'via [$symbol$context( \($namespace\))]($style)'
+# style = "fg:bright-#86BBD8"
+# format = "[ ☸ $context ]($style)"
+
+[character]
+success_symbol = "[❯](bold #9A348E)"
+error_symbol = "[❯](bold red)"
+
+### [username]
+### show_always = true
+### style_user = "bg:#9A348E"
+### style_root = "bg:#9A348E"
+### format = '[$user]($style)'
+### disabled = false
+###
+### [hostname]
+### ssh_only = false
+### style = "bg:#9A348E"
+### format = '[$hostname]($style)'
+### disabled = false
+
+
+# [directory]
+# style = "bold #86BBD8"
+# truncation_length = 3
+
+# [git_branch]
+# symbol = " "
+# style = "bold purple"
+
+# [kubernetes]
+# disabled = false
+# symbol = "☸ "
+# style = "bold blue"
+
+[aws]
+symbol = ""
+style = "bold #DA627D"
+
+[cmd_duration]
+min_time = 500
+format = "took [$duration]($style) "
+style = "bold red"
+
+# [character]
+# success_symbol = "[❯](bold #9A348E)"
+# error_symbol = "[❯](bold red)"
+
+[nodejs]
+disabled = true
+
+[python]
+format = 'via [${symbol}(${version})]($style) ${virtualenv}'
+# format = 'via [${symbol}(${version})(${virtualenv})]($style)'
+symbol = "🐍 "
+style = "bold yellow"
+
+[ruby]
+disabled = true
+
+[gcloud]
+disabled = true
+
+[battery]
+full_symbol = "🔋"
+charging_symbol = "🔌"
+discharging_symbol = "⚡"
+
+[[battery.display]]
+threshold = 30
+style = "bold red"
+
+[time]
+disabled = false
+time_format = "%R" # Hour:Minute Format
+style = "bg:#1d2230"
+format = '[[ 󱑍 $time ](bg:#1C3A5E fg:#8DFBD2)]($style)'

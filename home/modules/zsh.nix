@@ -40,6 +40,9 @@ lib.mkMerge [
       enableZshIntegration = true;
     };
 
+    # Same XDG path on Linux and macOS: ~/.config/starship.toml
+    home.file.".config/starship.toml".source = ../../dotfiles/zsh/starship.toml;
+
     programs.zsh = {
       # Plugins sourced directly from Nix store — no network on shell startup.
       plugins = [
