@@ -14,6 +14,7 @@
     emacs
     kubecolor
     notmuch
+    isync    # provides mbsync
   ];
 
   programs.direnv = {
