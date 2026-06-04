@@ -23,6 +23,13 @@
       homeConfigurations.default = home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
         modules = [ ./home/default.nix osModule ];
+        # shellTheme: "starship" (default) or "ohmyzsh"
+        # Set via SHELL_THEME env var: make switch SHELL_THEME=ohmyzsh
+        extraSpecialArgs = {
+          shellTheme =
+            let t = builtins.getEnv "SHELL_THEME";
+            in if t == "" then "starship" else t;
+        };
       };
 
       # Per-project devShell templates — added in Phase 4.

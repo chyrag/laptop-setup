@@ -1,7 +1,9 @@
 .PHONY: bootstrap switch build update diff rollback
 
-PROFILE := default
+PROFILE    := default
 HM_PROFILE := $(HOME)/.local/state/nix/profiles/home-manager
+# Shell prompt theme: "starship" (default) or "ohmyzsh"
+SHELL_THEME ?= starship
 
 # Require git identity for switch/build targets
 guard-git-env:
@@ -20,10 +22,10 @@ bootstrap:
 	@./scripts/bootstrap.sh
 
 switch: guard-git-env
-	home-manager switch --flake .#$(PROFILE) --impure
+	SHELL_THEME=$(SHELL_THEME) home-manager switch --flake .#$(PROFILE) --impure
 
 build: guard-git-env
-	home-manager build --flake .#$(PROFILE) --impure
+	SHELL_THEME=$(SHELL_THEME) home-manager build --flake .#$(PROFILE) --impure
 
 update: guard-git-env
 	nix flake update

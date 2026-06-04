@@ -1,4 +1,4 @@
 { ... }:
 {
-  # Tmux configuration — populated in Phase 3.
+  home.file.".tmux.conf".source = ../../dotfiles/tmux/tmux.conf;
 }

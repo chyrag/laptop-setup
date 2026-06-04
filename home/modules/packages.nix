@@ -11,6 +11,8 @@
     yq-go
     zoxide
     nodejs_22    # npm + claude-code dependency
+    emacs
+    kubecolor
   ];
 
   programs.direnv = {

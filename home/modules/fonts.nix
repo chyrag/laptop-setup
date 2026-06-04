@@ -1,4 +1,6 @@
-{ ... }:
+{ pkgs, ... }:
 {
-  # Fonts — populated in Phase 3.
+  home.packages = [
+    pkgs.nerd-fonts.meslo-lg
+  ];
 }

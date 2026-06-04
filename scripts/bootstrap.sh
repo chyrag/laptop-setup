@@ -40,6 +40,12 @@ nix run github:nix-community/home-manager -- switch \
     --flake "${REPO_DIR}#default" \
     --impure
 
+# Install TPM (Tmux Plugin Manager) if not present
+if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then
+    echo "==> Installing Tmux Plugin Manager..."
+    git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
+fi
+
 # Install claude-code via npm (node is on PATH after home-manager activation)
 if ! command -v claude &>/dev/null; then
     echo "==> Installing claude-code via npm..."

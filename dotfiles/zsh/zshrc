@@ -1,0 +1,47 @@
+# Locale
+export LANG=en_US.UTF-8
+export LANGUAGE=en_US:en
+export LC_ALL=en_US.UTF-8
+
+# General environment
+export EDITOR=vim
+export TF_CLI_ARGS="-no-color"
+
+# PATH additions for non-Nix tools
+# Nix-managed binaries are already on PATH via ~/.nix-profile/bin
+typeset -U path
+path=(
+    "$HOME/bin"
+    "$HOME/.local/bin"
+    "$HOME/.npm-global/bin"
+    "$HOME/.bun/bin"
+    $path
+)
+export PATH
+
+# History options (home-manager sets HISTFILE, HISTSIZE, SAVEHIST via programs.zsh.history)
+setopt HIST_IGNORE_ALL_DUPS SHARE_HISTORY
+
+# Autosuggestions
+export ZSH_AUTOSUGGEST_STRATEGY=(history completion)
+export ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=8"
+
+# Bun completions
+[ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
+
+# Aliases
+# Note: Nix installs bat as `bat` (not `batcat` as on Ubuntu)
+alias ls='eza --color=always --git'
+alias fzfp='fzf --preview "bat --style numbers --color always {}"'
+alias cat='bat --paging never --theme DarkNeon --style plain'
+alias cdup='cd $(git rev-parse --show-toplevel)'
+alias kubectl='kubecolor'
+alias k='kubectl'
+alias cd='z'
+
+# Claude Status Bar Monitor
+alias cs='claude-statusbar'
+alias cstatus='claude-statusbar'
+
+# cmux
+[ -f "$HOME/.cmux/cmux.sh" ] && source "$HOME/.cmux/cmux.sh"

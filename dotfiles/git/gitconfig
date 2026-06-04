@@ -1,0 +1,67 @@
+[advice]
+	detachedHead = false
+	pushNonFastForward = false
+	statusHints = false
+
+[user]
+	name = __GIT_USER__
+	email = __GIT_EMAIL__
+
+[core]
+	editor = vim
+	autocrlf = input
+	ignorecase = false
+	whitespace = cr-at-eol
+	pager = less -q
+	symlinks = false
+
+[push]
+	default = current
+
+[help]
+	autocorrect = 1
+
+[github]
+	user = chyrag
+
+[color]
+	ui = auto
+	diff = auto
+	status = auto
+	branch = auto
+
+[merge]
+	renameLimit = 999999
+
+[alias]
+	alias      = "!f() { git config -l | grep ^alias | sort ; }; f"
+	amend      = commit --all --amend -C @
+	checkout   = switch
+	dad        = "!curl https://icanhazdadjoke.com/ && git add"
+	dc         = diff --cached
+	done       = "!git checkout main && git pull && git branch -d @{-1} && git up"
+	last       = "log -1 --pretty=%H"
+	ll         = log --pretty=format:"%C(yellow)%h%Cred%d\\ %Creset%s%C(cyan)\\ [%an]" --decorate --numstat
+	localprune = "!git branch -vv | grep ': gone]' | grep -v '*' | awk '{print $1}' | xargs git branch -D"
+	lol        = log --pretty=oneline --abbrev-commit --graph --decorate
+	log-me     = "!UN=$(git config user.name) && git log --author=\"$UN\" --pretty=format:'%h %cd %s' --date=short"
+	ls         = log --pretty=format:"%C(green)%h\\ %C(yellow)[%ad]%C(red)%d\\ %Creset%s%C(cyan)\\ [%an]" --decorate --date=relative
+	rank       = shortlog -sn --no-merges
+	st         = status --short --branch
+	undo       = reset HEAD~1 --mixed
+	undo-commit = "!git reset --soft HEAD^"
+	up         = "!git pull --rebase --autostash --prune && git submodule update --init --recursive"
+	tags       = log --tags --simplify-by-decoration --pretty="format:%ai\\ %d"
+	theirs     = checkout --theirs
+	wt         = worktree list
+	wta        = worktree add
+	wtr        = worktree remove
+	wtp        = worktree prune
+	wtn        = "!f() { repo=$(basename $(git rev-parse --show-toplevel)); clean_branch=$(echo $1 | sed 's/feature\\///;s/bugfix\\///;s/hotfix\\///'); git worktree add -b \"$1\" ../${repo}-${clean_branch}; }; f"
+	wtpr       = "!f() { repo=$(basename $(git rev-parse --show-toplevel)); git fetch origin pull/$1/head:pr-$1; git worktree add ../${repo}-pr-$1 pr-$1; }; f"
+	wtd        = "!f() { branch=$(git -C \"$1\" symbolic-ref --short HEAD); git worktree remove \"$1\"; git branch -D \"$branch\"; }; f"
+	wtsync     = "!git fetch --all && git worktree list | tail -n +2 | awk '{print $1}' | while read wt; do echo \"=== $(basename $wt) ===\"; git -C \"$wt\" status -sb; done"
+
+[credential]
+	helper = store
+	helper = cache --timeout 86400

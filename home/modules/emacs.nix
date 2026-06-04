@@ -1,4 +1,4 @@
 { ... }:
 {
-  # Emacs configuration — populated in Phase 3.
+  home.file.".emacs".source = ../../dotfiles/emacs/emacs;
 }
