@@ -32,9 +32,17 @@
         };
       };
 
-      # Per-project devShell templates — added in Phase 4.
+      # Per-project devShell templates.
       # Usage: nix flake init -t /path/to/laptop-setup#go
-      #        (or via scripts/mkdev.sh)
-      templates = { };
+      #        (or via scripts/mkdev.sh <type> <project-name>)
+      templates = {
+        go        = { path = ./templates/go;        description = "Go development environment"; };
+        python    = { path = ./templates/python;    description = "Python development environment"; };
+        rust      = { path = ./templates/rust;      description = "Rust development environment"; };
+        ruby      = { path = ./templates/ruby;      description = "Ruby development environment"; };
+        ansible   = { path = ./templates/ansible;   description = "Ansible + Python environment"; };
+        terraform = { path = ./templates/terraform; description = "Terraform infrastructure environment"; };
+        opentofu  = { path = ./templates/opentofu;  description = "OpenTofu infrastructure environment"; };
+      };
     };
 }
