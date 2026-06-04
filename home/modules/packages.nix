@@ -13,6 +13,7 @@
     nodejs_22    # npm + claude-code dependency
     emacs
     kubecolor
+    notmuch
   ];
 
   programs.direnv = {
