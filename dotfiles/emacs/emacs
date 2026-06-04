@@ -1,1 +1,1327 @@
-;; Replace this file with your ~/.emacs content.
+;;; init.el --- Comprehensive Emacs Configuration -*- lexical-binding: t; -*-
+;;
+;; Author: Chirag Kantharia
+;; Description: OS-independent config for email (Gmail), org-mode, Python, Go, Rust, Bash
+;; Theme: Modus Operandi Tinted with Nerd Fonts
+;; Platforms: Windows, macOS, Linux
+;;
+
+;;; Code:
+
+;;; ===========================================================================
+;;; EARLY INIT - Performance Optimizations
+;;; ===========================================================================
+
+;; Increase garbage collection threshold during startup
+(setq gc-cons-threshold (* 100 1024 1024))  ; 100MB during startup
+(setq read-process-output-max (* 1024 1024)) ; 1MB for LSP
+
+;; Reset GC threshold after startup
+(add-hook 'emacs-startup-hook
+          (lambda ()
+            (setq gc-cons-threshold (* 20 1024 1024)))) ; 20MB normal operation
+
+;;; ===========================================================================
+;;; OS DETECTION
+;;; ===========================================================================
+
+(defconst my/is-windows (eq system-type 'windows-nt))
+(defconst my/is-macos (eq system-type 'darwin))
+(defconst my/is-linux (eq system-type 'gnu/linux))
+
+;;; ===========================================================================
+;;; PACKAGE MANAGEMENT
+;;; ===========================================================================
+
+(require 'package)
+(setq package-archives
+      '(("melpa" . "https://melpa.org/packages/")
+        ("melpa-stable" . "https://stable.melpa.org/packages/")
+        ("gnu" . "https://elpa.gnu.org/packages/")
+        ("nongnu" . "https://elpa.nongnu.org/nongnu/")))
+
+(package-initialize)
+
+;; Bootstrap use-package
+(unless (package-installed-p 'use-package)
+  (package-refresh-contents)
+  (package-install 'use-package))
+
+(require 'use-package)
+(setq use-package-always-ensure t)
+(setq use-package-verbose t)
+
+;;; ===========================================================================
+;;; OS-SPECIFIC SETTINGS
+;;; ===========================================================================
+
+;; Windows-specific
+(when my/is-windows
+  (set-language-environment "UTF-8")
+  (set-default-coding-systems 'utf-8)
+  (set-terminal-coding-system 'utf-8)
+  (set-keyboard-coding-system 'utf-8)
+  (prefer-coding-system 'utf-8)
+
+  ;; Git Bash for shell commands
+  (when (file-exists-p "C:/Program Files/Git/bin/bash.exe")
+    (setq explicit-shell-file-name "C:/Program Files/Git/bin/bash.exe")
+    (setq shell-file-name "bash")
+    (setq explicit-bash.exe-args '("--login" "-i"))
+    (add-to-list 'exec-path "C:/Program Files/Git/bin")
+    (add-to-list 'exec-path "C:/Program Files/Git/usr/bin"))
+
+  ;; Prevent Windows from opening files in new frames
+  (setq pop-up-frames nil)
+
+  ;; Fix slow file operations on Windows
+  (setq w32-get-true-file-attributes nil)
+
+  ;; Native compilation settings
+  (when (fboundp 'native-compile-async)
+    (setq native-comp-async-report-warnings-errors nil)))
+
+;; macOS-specific
+(when my/is-macos
+  ;; Use Command as Meta
+  (setq mac-option-modifier 'meta)
+  (setq mac-command-modifier 'super)
+
+  ;; macOS ls doesn't support --dired
+  (setq dired-use-ls-dired nil)
+
+  ;; Add Homebrew paths
+  (let ((homebrew-path (if (file-exists-p "/opt/homebrew/bin")
+                           "/opt/homebrew/bin"    ; Apple Silicon
+                         "/usr/local/bin")))      ; Intel
+    (add-to-list 'exec-path homebrew-path)
+    (setenv "PATH" (concat homebrew-path ":" (getenv "PATH"))))
+
+  ;; Native compilation settings
+  (when (fboundp 'native-compile-async)
+    (setq native-comp-async-report-warnings-errors nil)))
+
+;; Linux-specific
+(when my/is-linux
+  ;; Native compilation settings
+  (when (fboundp 'native-compile-async)
+    (setq native-comp-async-report-warnings-errors nil)))
+
+;; Common UTF-8 settings for all platforms
+(prefer-coding-system 'utf-8)
+(set-default-coding-systems 'utf-8)
+
+;;; ==========================================================================
+;;; PATH CONFIGURATION (OS-independent)
+;;; ==========================================================================
+
+;; Add user-local bin directories to exec-path
+(dolist (path (list
+               (expand-file-name "~/bin")
+               (expand-file-name "~/.local/bin")
+               (expand-file-name "~/go/bin")
+               (expand-file-name "~/.cargo/bin")
+               (expand-file-name "~/.nix-profile/bin")))
+  (when (file-directory-p path)
+    (add-to-list 'exec-path path)
+    (setenv "PATH" (concat path (if my/is-windows ";" ":") (getenv "PATH")))))
+
+;;; ==========================================================================
+;;; BASIC UI SETTINGS
+;;; ==========================================================================
+
+;; Disable startup screen
+(setq inhibit-startup-screen t)
+(setq inhibit-startup-message t)
+(setq initial-scratch-message nil)
+
+;; Disable GUI elements
+(menu-bar-mode -1)    ;; Removes the top menu bar
+(tool-bar-mode -1)    ;; Removes the toolbar
+(scroll-bar-mode -1)  ;; Removes the vertical scrollbar
+(tooltip-mode -1)     ;; Removes the hover tooltips
+(set-fringe-mode 10)
+
+;; Line numbers
+(global-display-line-numbers-mode t)
+(setq display-line-numbers-type 'relative)
+
+;; Highlight current line
+(global-hl-line-mode t)
+
+;; Show column number in mode line
+(column-number-mode t)
+
+;; Show matching parentheses
+(show-paren-mode t)
+(setq show-paren-delay 0
+      show-paren-style 'mixed)
+
+;; Visual bell instead of audio
+(setq visible-bell t)
+;; On macOS, visible-bell can be ugly, use mode-line flash instead
+(when my/is-macos
+  (setq visible-bell nil)
+  (setq ring-bell-function
+        (lambda ()
+          (invert-face 'mode-line)
+          (run-with-timer 0.1 nil #'invert-face 'mode-line))))
+
+;; Smoother scrolling
+(setq scroll-conservatively 101)
+(setq scroll-margin 3)
+(setq mouse-wheel-scroll-amount '(1 ((shift) . 1)))
+(setq mouse-wheel-progressive-speed nil)
+
+;; Yes/No -> y/n
+(fset 'yes-or-no-p 'y-or-n-p)
+
+;; Revert buffers when files change on disk
+(global-auto-revert-mode t)
+
+;;; ==========================================================================
+;;; FONT CONFIGURATION (Nerd Fonts)
+;;; ==========================================================================
+
+;; Set your preferred Nerd Font - try these in order of preference
+;; Download from: https://www.nerdfonts.com/font-downloads
+(defvar my/preferred-fonts
+  '("MesloLGS Nerd Font"      ; Meslo - excellent for programming
+    "MesloLGS NF"             ; Alternative name on some systems
+    "SauceCodePro Nerd Font"  ; Source Code Pro variant
+    "Hack Nerd Font"          ; Hack font
+    "JetBrainsMono Nerd Font" ; JetBrains Mono
+    "Menlo"                   ; macOS fallback
+    "Consolas"                ; Windows fallback
+    "DejaVu Sans Mono"))      ; Linux fallback
+
+(defvar my/font-height (cond (my/is-macos 140)    ; macOS has higher DPI
+                             (my/is-windows 140)
+                             (t 200)))            ; Linux
+
+(defun my/set-font ()
+  "Set the first available font from the preferred list."
+  (catch 'font-found
+    (dolist (font my/preferred-fonts)
+      (when (member font (font-family-list))
+        (set-face-attribute 'default nil
+                            :family font
+                            :height my/font-height
+                            :weight 'normal)
+        (message "Using font: %s" font)
+        (throw 'font-found font)))))
+
+;; Set font after frame creation (needed for daemon mode)
+(if (daemonp)
+    (add-hook 'after-make-frame-functions
+              (lambda (frame)
+                (with-selected-frame frame (my/set-font))))
+  (add-hook 'emacs-startup-hook #'my/set-font))
+
+;;; ==========================================================================
+;;; THEME - Modus Operandi Tinted (built-in, Emacs 29+)
+;;; ==========================================================================
+
+(use-package modus-themes
+  :ensure nil  ; Built-in since Emacs 29
+  :config
+  (setq modus-themes-italic-constructs t)
+  (setq modus-themes-bold-constructs t)
+  (setq modus-themes-org-blocks 'tinted-background)
+  (setq modus-themes-headings '((1 . (1.3)) (2 . (1.1)) (t . (1.0)))))
+
+;; Available as an alternative to modus-themes; defer so it doesn't load at startup.
+(use-package solarized-theme
+  :defer t)
+
+(use-package circadian
+  :ensure t
+  :init
+  ;; If using sunrise/sunset times, configure your geographic location:
+  (setq calendar-latitude 12.990806 
+        calendar-longitude 77.660639)
+  :config
+  ;; Option A: Switch dynamically based on local Sunrise / Sunset
+  (setq circadian-themes '((:sunrise . modus-operandi-tinted)
+                           (:sunset  . modus-vivendi-tinted)))
+
+  ;; Option B: Alternatively, use explicit fixed times if you prefer:
+  ;; (setq circadian-themes '(("07:30" . doom-one-light)
+  ;;                          ("18:30" . doom-one)))
+
+  ;; Initialize the daemon to monitor time/position
+  (circadian-setup))
+
+(defun my/notmuch-update-faces-for-theme ()
+  "Set notmuch unread face: dark green for light themes, bright green for dark."
+  (let ((unread-color (if (eq (frame-parameter nil 'background-mode) 'light)
+                          "#2a6b2a"
+                        "#00e000")))
+    (setq notmuch-search-line-faces
+          `(("unread"  . (:foreground ,unread-color :weight bold))
+            ("deleted" . (:foreground "red" :strike-through t))
+            ("flagged" . (:foreground "orange" :weight bold))
+            ("spam"    . (:foreground "red"))))))
+
+(add-hook 'circadian-after-load-theme-hook #'my/notmuch-update-faces-for-theme)
+
+;;; ==========================================================================
+;;; MODELINE - Smart Mode Line + Nyan
+;;; ==========================================================================
+
+(use-package smart-mode-line
+  :config
+  (setq sml/theme 'respectful)
+  (setq sml/no-confirm-load-theme t)
+  (setq sml/shorten-directory t)
+  (setq sml/shorten-modes t)
+  (sml/setup))
+
+;; (use-package smart-mode-line-powerline-theme
+;;   :after smart-mode-line
+;;   :config
+;;   (setq sml/theme 'powerline)
+;;   (sml/setup))
+
+(use-package smartparens
+  :ensure t
+  :diminish smartparens-mode
+
+  :hook
+  (prog-mode . smartparens-mode)
+
+  :config
+  (require 'smartparens-config)
+
+  :bind
+  (:map smartparens-mode-map
+        ("C-M-f" . sp-forward-sexp)
+        ("C-M-b" . sp-backward-sexp)
+        ("C-M-n" . sp-next-sexp)
+        ("C-M-p" . sp-previous-sexp)
+        ("C-M-u" . sp-up-sexp)
+        ("C-M-d" . sp-down-sexp)
+        ("C-)" . sp-forward-slurp-sexp)
+        ("C-}" . sp-forward-barf-sexp)))
+
+(use-package nyan-mode
+  :after smart-mode-line
+  :config
+  (setq nyan-animate-nyancat t)
+  (setq nyan-wavy-trail t)
+  (setq nyan-bar-length 20)
+  (nyan-mode 1))
+
+;;; ==========================================================================
+;;; COMPLETION FRAMEWORK - Vertico + Orderless + Marginalia + Consult
+;;; ==========================================================================
+
+(use-package vertico
+  :init (vertico-mode)
+  :config
+  (setq vertico-cycle t)
+  (setq vertico-count 15))
+
+(use-package vertico-directory
+  :after vertico
+  :ensure nil  ; Part of vertico
+  :bind (:map vertico-map
+              ("RET" . vertico-directory-enter)
+              ("DEL" . vertico-directory-delete-char)
+              ("M-DEL" . vertico-directory-delete-word))
+  :hook (rfn-eshadow-update-overlay . vertico-directory-tidy))
+
+(use-package orderless
+  :config
+  (setq completion-styles '(orderless basic))
+  (setq completion-category-overrides '((file (styles basic partial-completion)))))
+
+(use-package marginalia
+  :init (marginalia-mode))
+
+(use-package consult
+  :bind (("C-s" . consult-line)
+         ("C-x b" . consult-buffer)
+         ("C-x 4 b" . consult-buffer-other-window)
+         ("M-g g" . consult-goto-line)
+         ("M-g M-g" . consult-goto-line)
+         ("M-s r" . consult-ripgrep)
+         ("M-s f" . consult-find)
+         ("C-c h" . consult-history)
+         ("C-c M" . consult-mode-command)))
+
+(use-package embark
+  :bind (("C-." . embark-act)
+         ("C-;" . embark-dwim)))
+
+(use-package embark-consult
+  :after (embark consult))
+
+;;; ==========================================================================
+;;; WHICH-KEY - Keybinding Help
+;;; ==========================================================================
+
+(use-package which-key
+  :diminish
+  :config
+  (which-key-mode)
+  (setq which-key-idle-delay 0.5)
+  (setq which-key-popup-type 'side-window)
+  (setq which-key-side-window-location 'bottom))
+
+;;; ==========================================================================
+;;; RAINBOW-MODE - Colorize color codes
+;;; ==========================================================================
+
+(use-package rainbow-mode
+  :diminish
+  :hook ((css-mode . rainbow-mode)
+         (html-mode . rainbow-mode)
+         (web-mode . rainbow-mode)
+         (emacs-lisp-mode . rainbow-mode)))
+
+;;; ==========================================================================
+;;; WHITESPACE-MODE - Visualize whitespace
+;;; ==========================================================================
+
+(use-package whitespace
+  :defer 10
+  :ensure nil  ; Built-in
+  :diminish
+  :hook ((prog-mode . whitespace-mode)
+         (text-mode . whitespace-mode))
+  :config
+  ;; Only show trailing whitespace, tabs, and long lines
+  (setq whitespace-style '(face
+			   empty
+			   tabs
+                           trailing
+                           tab-mark
+                           lines-tail))
+  (setq whitespace-line-column 120)
+
+  ;; Subtle tab indicator - just slightly darker than background
+  (set-face-attribute 'whitespace-tab nil
+                      :foreground "#e0dac8")  ; Very subtle, close to modus-operandi-tinted bg
+
+  ;; Make whitespace indicators subtle
+  (set-face-attribute 'whitespace-trailing nil
+                      :background "red1"
+                      :foreground "yellow"
+                      :weight 'bold))
+
+;;; ==========================================================================
+;;; WHITESPACE-CLEANUP-MODE - Auto cleanup whitespace on save
+;;; ==========================================================================
+
+(use-package whitespace-cleanup-mode
+  :defer 10
+  :diminish
+  :hook ((prog-mode . whitespace-cleanup-mode)
+         (text-mode . whitespace-cleanup-mode))
+  :config
+  ;; Only cleanup if the file was already clean
+  (setq whitespace-cleanup-mode-only-if-initially-clean t))
+
+;;;
+;;; Volatile highlights
+;;;
+(use-package volatile-highlights
+  :defer 10
+  :diminish volatile-highlights-mode
+  :config
+  (volatile-highlights-mode +1)
+  :hook
+  (prog-mode . volatile-highlights-mode))
+
+;;;
+;;; Flycheck
+;;;
+(use-package flycheck
+  :defer 10
+  :diminish flycheck-mode
+  :config
+  (defalias 'flycheck-show-error-at-point-soon 'flycheck-show-error-at-point)
+  :hook
+  (prog-mode . flycheck-mode))
+
+;;;
+;;; Flyspell
+;;;
+(use-package flyspell
+  :defer 10
+  :diminish flyspell-mode
+  :hook
+  (prog-mode . flyspell-prog-mode))
+
+;;; ==========================================================================
+;;; HL-TODO - Highlight TODO/FIXME/etc in comments
+;;; ==========================================================================
+
+(use-package hl-todo
+  :defer 10
+  :hook ((prog-mode . hl-todo-mode)
+         (org-mode . hl-todo-mode))
+  :config
+  (global-hl-todo-mode)
+  (setq hl-todo-keyword-faces
+        '(("TODO"   . "#FF0000")
+          ("FIXME"  . "#FF0000")
+          ("DEBUG"  . "#A020F0")
+          ("GOTCHA" . "#FF4500")
+          ("STUB"   . "#1E90FF")
+          ("NOTE"   . "#1E90FF")
+          ("HACK"   . "#FF4500")
+          ("XXX"    . "#FF4500")
+          ("REVIEW" . "#FF8C00")
+          ("OPTIMIZE" . "#FFD700"))))
+
+;;;
+;;; PROGRAMMING MODE
+;;;
+(use-package diff-hl
+  :defer 10
+  :ensure t
+  :bind
+  ("C-c r" . diff-hl-revert-hunk)
+  ("C-c n" . diff-hl-next-hunk)
+  :commands global-diff-hl-mode
+  :config
+  (add-hook 'magit-post-refresh-hook 'diff-hl-magit-post-refresh)
+  :hook
+  (prog-mode . diff-hl-mode))
+
+;;;
+;;; git-gutter-fringe — shows +/~/- change indicators in the left fringe
+;;;
+(use-package git-gutter-fringe
+  :diminish git-gutter-mode
+  :config
+  (define-fringe-bitmap 'git-gutter-fr:added    [224] nil nil '(center repeated))
+  (define-fringe-bitmap 'git-gutter-fr:modified [224] nil nil '(center repeated))
+  (define-fringe-bitmap 'git-gutter-fr:deleted  [128 192 224 240] nil nil 'bottom)
+  (global-git-gutter-mode +1))
+
+;;;
+;;; Magit
+;;;
+(use-package magit
+  :defer 10
+  :ensure t
+  :bind
+  ("C-x g" . magit-status)
+  ("C-x p" . magit-blame))
+
+;;; ==========================================================================
+;;; GOTO-LAST-CHANGE - Jump to last edit location
+;;; ==========================================================================
+
+(use-package goto-last-change
+  :bind (("C-c ;" . goto-last-change)
+         ("C-c ," . goto-last-change-reverse)))
+
+;;;
+;;; Python
+;;;
+(use-package python-mode
+  :defer t
+  :config
+  (autoload 'py-yapf "yapf" "Yet Another Python Formatter" t)
+  (py-yapf-enable-on-save)
+  (anaconda-mode)
+  ;; (anaconda-eldoc-mode)
+  :init
+  (setq python-shell-native-complete nil)
+  (setq python-indent-offset 4))
+
+(use-package company-anaconda
+  :after anaconda-mode
+  :config
+  (eval-after-load "company"
+    '(add-to-list 'company-backends 'company-anaconda)))
+
+;;;
+;;; Go
+;;;
+
+(use-package go-mode
+  :mode "\\.go\\'"
+  :hook ((go-mode . lsp-deferred)
+         (go-mode . (lambda ()
+                      (setq tab-width 4
+                            indent-tabs-mode t)
+                      (add-hook 'before-save-hook #'lsp-format-buffer nil t)
+                      (add-hook 'before-save-hook #'lsp-organize-imports nil t))))
+  :config
+  (setq gofmt-command "goimports"))
+
+(use-package lsp-mode
+  :commands (lsp lsp-deferred)
+  :hook (go-mode . lsp-deferred)
+  :custom
+  (lsp-keymap-prefix "C-c l")
+  (lsp-diagnostics-provider :flycheck)
+  (lsp-gopls-staticcheck t)
+  (lsp-eldoc-render-all t)
+  (lsp-idle-delay 0.5)
+  :config
+  ;; Tell lsp-mode that nix-ts-mode uses the nix language server (nil)
+  (add-to-list 'lsp-language-id-configuration '(nix-ts-mode . "nix")))
+
+(use-package lsp-ui
+  :after lsp-mode
+  :hook (lsp-mode . lsp-ui-mode)
+  :config
+  (setq lsp-ui-doc-enable t)
+  (setq lsp-ui-doc-show-with-cursor t)
+  (setq lsp-ui-sideline-enable t)
+  (setq lsp-ui-sideline-show-diagnostics t))
+
+(use-package company
+  :after lsp-mode
+  :hook (lsp-mode . company-mode)
+  :config
+  (setq company-minimum-prefix-length 1)
+  (setq company-idle-delay 0.2))
+
+(use-package flycheck
+  :hook (go-mode . flycheck-mode))
+
+;;;
+;;; Rust
+;;;
+(use-package rustic
+  :config
+  (setq rustic-lsp-client 'eglot))
+
+
+;;; ==========================================================================
+;;; FILE MANAGEMENT
+;;; ==========================================================================
+
+;; Store backups and autosaves in temp directory
+(setq backup-directory-alist
+      `((".*" . ,temporary-file-directory)))
+(setq auto-save-file-name-transforms
+      `((".*" ,temporary-file-directory t)))
+
+;; Keep custom settings in separate file
+;; (setq custom-file (expand-file-name "custom.el" user-emacs-directory))
+;; (when (file-exists-p custom-file)
+;;   (load custom-file))
+
+;; Recent files
+(recentf-mode 1)
+(setq recentf-max-menu-items 25)
+(setq recentf-max-saved-items 100)
+(global-set-key (kbd "C-x C-r") 'recentf-open-files)
+
+;; Persist minibuffer history across sessions
+(savehist-mode 1)
+(setq savehist-additional-variables
+      '(search-ring regexp-search-ring kill-ring compile-history))
+
+;;; ==========================================================================
+;;; ORG-MODE CONFIGURATION
+;;; ==========================================================================
+
+(use-package org
+  :ensure nil  ; Built-in
+  :hook ((org-mode . visual-line-mode)
+         (org-mode . org-indent-mode))
+
+  :init
+  ;; Define custom variable before use-package processes :custom
+  (defvar org-default-todo-file nil "Default file for TODO items.")
+  (defvar org-journal-file nil "Journal")
+
+  :config
+  ;; Set the custom variable after org-directory is set
+  (setq org-default-todo-file (expand-file-name "todo.org" org-directory)
+	org-journal-file (expand-file-name "journal.org" org-directory)
+	org-log-done 'time)
+  (set-face-attribute 'org-agenda-date-today nil
+		      :foreground "purple")
+  (set-face-attribute 'org-scheduled-today nil
+		      :foreground "#2a6b2a"
+		      :weight 'bold)
+  (set-face-attribute 'org-scheduled nil
+		      :foreground "brown")
+  (set-face-attribute 'org-done nil
+		      :foreground "#8a8a8a"
+		      :weight 'normal)
+  (defun jump-to-org-agenda ()
+    (interactive)
+    (let ((buf (get-buffer "*Org Agenda*"))
+          wind)
+      (if buf
+          (if (setq wind (get-buffer-window buf))
+              (select-window wind)
+            (if (called-interactively-p 'any)
+                (progn
+                  (select-window (display-buffer buf t t))
+                  (org-fit-window-to-buffer))
+              (with-selected-window (display-buffer buf)
+                (org-fit-window-to-buffer))))
+        ;; Use org-agenda with dashboard instead of org-agenda-list
+        (org-agenda nil "d"))))
+  (run-with-idle-timer 600 t 'jump-to-org-agenda)
+
+  :custom
+  ;; File locations
+  (org-directory "~/Dropbox/Agenda/org/personal") ; for home
+  (org-default-notes-file (concat org-directory "/notes.org"))
+  (org-agenda-files (list org-directory))
+
+  ;; Windows setup
+  (org-agenda-window-setup 'only-window)
+  (org-agenda-restore-windows-after-quit t)
+
+  ;; Agenda settings
+  (org-agenda-start-on-weekday nil)
+  (org-agenda-start-day "-1d")
+  (org-agenda-span 'fortnight)
+  (org-agenda-skip-scheduled-if-done t)
+  (org-agenda-skip-deadline-if-done t)
+  (org-agenda-skip-deadline-prewarning-if-scheduled 'pre-scheduled)
+  (org-agenda-include-diary t)
+  (org-deadline-warning-days 7)
+  (org-M-RET-my-split-line nil)
+
+  ;; TODO keywords
+  (org-todo-keywords
+   '((sequence "TODO(t)" "IN-PROGRESS(i)" "WAITING(w)" "|" "DONE(d)" "CANCELLED(c)")))
+
+  ;; Capture templates
+  (org-capture-templates
+   '(("t" "Todo" entry (file+headline org-default-todo-file "Tasks")
+      "* TODO %?\n  %U\n  %a")
+     ("n" "Note" entry (file+headline org-default-notes-file "Notes")
+      "* %? :NOTE:\n  %U\n  %a")
+     ("m" "Meeting" entry (file+headline org-default-notes-file "Meetings")
+      "* %? :MEETING:\n  %U")
+     ("j" "Journal" entry (file+headline org-journal-file "Journal")
+      "* %? %^G\nEntered on %U\n" empty-lines 1)))
+
+  ;; Visual settings
+  (org-hide-emphasis-markers t)
+  (org-pretty-entities t)
+  (org-ellipsis " ▾")
+  (org-src-fontify-natively t)
+  (org-src-tab-acts-natively t)
+
+  :bind
+  (("C-c a" . org-agenda)
+   ("C-c c" . org-capture)
+   ("C-c l" . org-store-link)))
+
+;; Org modern - better looking org-mode
+(use-package org-modern
+  :hook (org-mode . org-modern-mode)
+  :custom
+  (org-modern-star '("◉" "○" "●" "○" "●" "○" "●"))
+  (org-modern-table-vertical 1)
+  (org-modern-table-horizontal 0.2)
+  (org-modern-list '((43 . "➤") (45 . "–") (42 . "•")))
+  (org-modern-block-fringe nil))
+
+;; orgtbl-fit — auto-sizes org table columns to their content
+(use-package orgtbl-fit
+  :after org)
+
+;; Org bullets - alternative to org-modern
+;; (use-package org-bullets
+;;   :hook (org-mode . org-bullets-mode)
+;;   :custom
+;;   (org-bullets-bullet-list '("◉" "○" "●" "○" "●" "○" "●")))
+
+;;; ==========================================================================
+;;; ORG-AGENDA STARTUP - Display agenda on Emacs startup
+;;; ==========================================================================
+
+(defun my/show-org-agenda-on-startup ()
+  "Show org-agenda dashboard on Emacs startup."
+  ;; Ensure org is loaded first
+  (require 'org)
+
+  ;; Create org directory if it doesn't exist
+  (unless (file-directory-p org-directory)
+    (make-directory org-directory t))
+
+  ;; Create default org files if they don't exist
+  (dolist (file '("tasks.org" "notes.org" "journal.org"))
+    (let ((filepath (expand-file-name file org-directory)))
+      (unless (file-exists-p filepath)
+        (with-temp-buffer
+          (insert (format "#+TITLE: %s\n#+STARTUP: content\n\n"
+                          (capitalize (file-name-sans-extension file))))
+          (when (string= file "tasks.org")
+            (insert "* Tasks\n"))
+          (when (string= file "notes.org")
+            (insert "* Notes\n"))
+          (write-file filepath)))))
+
+  ;; Show the dashboard agenda
+  (org-agenda nil "a"))
+
+;; Run after startup is complete
+(add-hook 'emacs-startup-hook #'my/show-org-agenda-on-startup)
+
+;;; ==========================================================================
+;;; EMAIL - notmuch + mbsync
+;;; ==========================================================================
+
+(use-package notmuch
+  :ensure t
+  :after message
+  :config
+  ;; ===== DISPLAY SETTINGS =====
+  (setq notmuch-show-prefer-html t
+        notmuch-show-text/html-blocked-images nil
+        notmuch-show-all-tags-list '()
+        mm-text-html-renderer 'shr
+        browse-url-browser-function 'browse-url-default-browser
+        notmuch-hello-logo nil
+
+        ;; Auto-advance settings
+        notmuch-show-only-matching-messages t
+        notmuch-show-indent-messages-width 2
+
+        ;; Address completion
+        notmuch-address-command 'internal
+
+        ;; Disable FCC (Gmail/Yahoo save sent mail automatically)
+        notmuch-fcc-dirs nil)
+
+  ;; Enable visual line mode
+  (add-hook 'notmuch-show-hook 'notmuch-show-turn-on-visual-line-mode)
+
+  ;; ===== SAVED SEARCHES =====
+  (setq notmuch-saved-searches
+        '((:name "to me"            :query "(to:chirag.kantharia OR cc:chirag.kantharia OR to:chyrag OR cc:chyrag OR to:chirag OR cc:chirag) AND tag:unread" :key "m")
+          (:name "new"              :query "tag:unread" :key "u")
+          (:name "flagged"          :query "tag:flagged" :key "f")
+          (:name "github"           :query "tag:github" :key "g")
+          (:name "newsletters"      :query "tag:newsletters" :key "n")
+          (:name "investments"      :query "tag:investments" :key "i")
+          (:name "notices"          :query "tag:notices" :key "o")
+          (:name "lists"            :query "tag:lists")
+          (:name "python"           :query "tag:python")
+          (:name "today"            :query "date:today..now" :key "t")
+          (:name "yesterday"        :query "date:yesterday..yesterday")
+          (:name "this week"        :query "date:sunday..now" :key "w")
+          (:name "last week"        :query "date:last_week..sat")
+          (:name "later"            :query "tag:later" :key "L")
+          (:name "sent this week"   :query "tag:sent AND date:sun..now")
+          (:name "sent last week"   :query "tag:sent AND date:last_week..sat")
+          (:name "all"              :query "*" :key "a")
+          (:name "all sent"         :query "tag:sent OR tag:replied")))
+
+  ;; ===== SEARCH RESULT FORMATTING =====
+  (setq notmuch-search-result-format
+        '(("date"    . "%12s ")
+          ("count"   . "%6s ")
+          ("authors" . "%-23s ")
+          ("subject" . "%-60s ")
+          ("tags"    . "(%s)"))
+
+        notmuch-search-line-faces
+        '(("unread"  . (:foreground "#2a6b2a" :weight bold))
+          ("deleted" . (:foreground "red" :strike-through t))
+          ("flagged" . (:foreground "orange" :weight bold))
+          ("spam"    . (:foreground "red"))))
+
+  ;; ===== HELPER FUNCTIONS FOR AUTO-ADVANCE =====
+  (defun my/notmuch-show-tag-and-advance (tags)
+    "Apply TAGS and advance to next message or thread."
+    (notmuch-show-tag tags)
+    (condition-case nil
+        (notmuch-show-next-open-message)
+      (error
+       (notmuch-show-next-thread t))))
+
+  (defun my/notmuch-search-tag-and-advance (tags)
+    "Apply TAGS in search mode and advance to next thread."
+    (notmuch-search-tag tags)
+    (notmuch-search-next-thread))
+
+  ;; ===== NAVIGATION KEYBINDINGS =====
+
+  ;; Search mode (thread list)
+  (define-key notmuch-search-mode-map (kbd "n") 'notmuch-search-next-thread)
+  (define-key notmuch-search-mode-map (kbd "p") 'notmuch-search-previous-thread)
+  (define-key notmuch-search-mode-map (kbd "RET") 'notmuch-search-show-thread)
+  (define-key notmuch-search-mode-map (kbd "SPC") 'notmuch-search-show-thread)
+
+  ;; Show mode (message view)
+  (define-key notmuch-show-mode-map (kbd "j") 'scroll-up-line)
+  (define-key notmuch-show-mode-map (kbd "k") 'scroll-down-line)
+  (define-key notmuch-show-mode-map (kbd "n") 'notmuch-show-next-open-message)
+  (define-key notmuch-show-mode-map (kbd "p") 'notmuch-show-previous-open-message)
+  (define-key notmuch-show-mode-map (kbd "N") 'notmuch-show-next-thread)
+  (define-key notmuch-show-mode-map (kbd "P") 'notmuch-show-previous-thread)
+  (define-key notmuch-show-mode-map (kbd "SPC") 'notmuch-show-advance-and-archive)
+  (define-key notmuch-show-mode-map (kbd "R") 'notmuch-show-reply)
+  (define-key notmuch-show-mode-map (kbd "F") 'notmuch-show-forward-message)
+
+  ;; ===== TAGGING WITH AUTO-ADVANCE =====
+
+  ;; Mark as read (and advance)
+  (define-key notmuch-show-mode-map "r"
+              (lambda ()
+                "Mark as read and advance."
+                (interactive)
+                (my/notmuch-show-tag-and-advance '("-unread"))))
+
+  (define-key notmuch-search-mode-map "r"
+              (lambda ()
+                "Mark as read and advance."
+                (interactive)
+                (my/notmuch-search-tag-and-advance '("-unread"))))
+
+  ;; Mark as unread
+  (define-key notmuch-show-mode-map "u"
+              (lambda ()
+                "Mark as unread."
+                (interactive)
+                (notmuch-show-tag '("+unread"))))
+
+  (define-key notmuch-search-mode-map "u"
+              (lambda ()
+                "Mark as unread."
+                (interactive)
+                (notmuch-search-tag '("+unread"))))
+
+  ;; Delete (and advance)
+  (define-key notmuch-show-mode-map "d"
+              (lambda ()
+                "Delete and advance to next message."
+                (interactive)
+                (my/notmuch-show-tag-and-advance '("+deleted" "-inbox" "-unread"))))
+
+  (define-key notmuch-search-mode-map "d"
+              (lambda ()
+                "Delete and advance to next thread."
+                (interactive)
+                (my/notmuch-search-tag-and-advance '("+deleted" "-inbox" "-unread"))))
+
+  ;; Mark as spam (and advance)
+  (define-key notmuch-show-mode-map "S"
+              (lambda ()
+                "Mark as spam and advance."
+                (interactive)
+                (my/notmuch-show-tag-and-advance '("+spam" "-inbox" "-unread"))))
+
+  (define-key notmuch-search-mode-map "S"
+              (lambda ()
+                "Mark as spam and advance."
+                (interactive)
+                (my/notmuch-search-tag-and-advance '("+spam" "-inbox" "-unread"))))
+
+  ;; Flag for later (and advance)
+  (define-key notmuch-show-mode-map "L"
+              (lambda ()
+                "Flag for later and advance."
+                (interactive)
+                (my/notmuch-show-tag-and-advance '("+flagged" "-inbox"))))
+
+  (define-key notmuch-search-mode-map "L"
+              (lambda ()
+                "Flag for later and advance."
+                (interactive)
+                (my/notmuch-search-tag-and-advance '("+flagged" "-inbox"))))
+
+  ;; Archive (remove from inbox, advance)
+  (define-key notmuch-show-mode-map "a"
+              (lambda ()
+                "Archive and advance."
+                (interactive)
+                (my/notmuch-show-tag-and-advance '("-inbox" "-unread"))))
+
+  (define-key notmuch-search-mode-map "a"
+              (lambda ()
+                "Archive and advance."
+                (interactive)
+                (my/notmuch-search-tag-and-advance '("-inbox" "-unread"))))
+
+  ;; ===== ADDITIONAL KEYBINDINGS =====
+
+  ;; Toggle unread filter
+  (define-key notmuch-search-mode-map "U"
+              (lambda ()
+                "Toggle unread-only view."
+                (interactive)
+                (if (string-match "tag:unread" notmuch-search-query-string)
+                    (notmuch-search (replace-regexp-in-string " AND tag:unread" "" notmuch-search-query-string))
+                  (notmuch-search (concat notmuch-search-query-string " AND tag:unread")))))
+
+  ;; Refresh
+  (define-key notmuch-search-mode-map "g" 'notmuch-refresh-this-buffer)
+  (define-key notmuch-show-mode-map "g" 'notmuch-refresh-this-buffer)
+
+  ;; Bounce/resend
+  (define-key notmuch-show-mode-map "b"
+              (lambda (&optional address)
+                "Bounce/resend message."
+                (interactive "sBounce To: ")
+                (notmuch-show-view-raw-message)
+                (message-resend address)))
+
+  ;; View HTML part
+  (define-key notmuch-show-mode-map "H" 'notmuch-show-view-part)
+
+  ;; Quit
+  (define-key notmuch-show-mode-map "q" 'notmuch-bury-or-kill-this-buffer)
+  (define-key notmuch-search-mode-map "q" 'notmuch-bury-or-kill-this-buffer)
+
+  :bind
+  ("C-c n" . notmuch))
+
+;; ===== SMTP CONFIGURATION FOR SENDING MAIL =====
+(require 'smtpmail)
+
+(setq message-send-mail-function 'smtpmail-send-it
+      smtpmail-stream-type 'starttls
+      smtpmail-smtp-service 587
+      smtpmail-queue-dir (expand-file-name "~/Maildir/queue/cur")
+      send-mail-function 'smtpmail-send-it)
+
+;; Create queue directory if it doesn't exist
+(unless (file-directory-p smtpmail-queue-dir)
+  (make-directory smtpmail-queue-dir t))
+
+;; ===== CONTEXT-AWARE REPLIES (Auto-detect account from headers) =====
+(defun my/notmuch-set-account ()
+  "Set SMTP account based on To/Cc/From headers."
+  (let* ((to (message-fetch-field "To"))
+         (cc (message-fetch-field "Cc"))
+         (from (message-fetch-field "From"))
+         (all-recipients (concat (or to "") " " (or cc "") " " (or from ""))))
+    (cond
+     ;; Gmail account
+     ((string-match-p "chirag\\.kantharia@gmail\\.com" all-recipients)
+      (setq user-mail-address "chirag.kantharia@gmail.com"
+            user-full-name "Chirag Kantharia"
+            smtpmail-smtp-server "smtp.gmail.com"
+            smtpmail-smtp-service 587
+            smtpmail-smtp-user "chirag.kantharia@gmail.com"
+            smtpmail-stream-type 'starttls)
+      (message "Using Gmail account"))
+
+     ;; Yahoo account
+     ((string-match-p "chyrag@yahoo\\.com" all-recipients)
+      (setq user-mail-address "chyrag@yahoo.com"
+            user-full-name "Chirag Kantharia"
+            smtpmail-smtp-server "smtp.mail.yahoo.com"
+            smtpmail-smtp-service 587
+            smtpmail-smtp-user "chyrag@yahoo.com"
+            smtpmail-stream-type 'starttls)
+      (message "Using Yahoo account"))
+
+     ;; Kantharia account
+     ((string-match-p "chirag@kantharia\\.in" all-recipients)
+      (setq user-mail-address "chirag@kantharia.in"
+            user-full-name "Chirag Kantharia"
+            smtpmail-smtp-server "mail.kantharia.in"
+            smtpmail-smtp-service 993
+            smtpmail-smtp-user "chirag"
+            smtpmail-stream-type 'starttls)
+      (message "Using Kantharia account"))
+
+     ;; Default to Gmail if no match
+     (t
+      (setq user-mail-address "chirag.kantharia@gmail.com"
+            user-full-name "Chirag Kantharia"
+            smtpmail-smtp-server "smtp.gmail.com"
+            smtpmail-smtp-service 587
+            smtpmail-smtp-user "chirag.kantharia@gmail.com"
+            smtpmail-stream-type 'starttls)
+      (message "Using default Gmail account")))))
+
+;; Hook to set account when composing
+(add-hook 'message-setup-hook 'my/notmuch-set-account)
+
+;; Also set on reply
+(add-hook 'notmuch-mua-send-hook 'my/notmuch-set-account)
+
+;; Face customization for notmuch
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(message-header-date ((t (:foreground "#2aa198" :weight bold))))
+ '(message-header-from ((t (:foreground "#2aa198")))))
+
+;;; ==========================================================================
+;;; UI ENHANCEMENTS
+;;; ==========================================================================
+
+;; Disable line numbers in certain modes
+(dolist (mode '(org-mode-hook
+                org-agenda-mode-hook
+                term-mode-hook
+                shell-mode-hook
+                eshell-mode-hook
+                notmuch-hello-mode-hook
+                notmuch-search-mode-hook
+                notmuch-show-mode-hook
+                notmuch-tree-mode-hook))
+  (add-hook mode (lambda () (display-line-numbers-mode 0))))
+
+;; Rainbow delimiters
+(use-package rainbow-delimiters
+  :defer 10
+  :hook (prog-mode . rainbow-delimiters-mode))
+
+;; Project management
+(use-package projectile
+  :defer 10
+  :diminish
+  :config
+  (projectile-mode +1)
+  (setq projectile-project-search-path '("~/projects" "~/work"))
+  (setq projectile-indexing-method 'hybrid)
+  :bind-keymap
+  ("C-c p" . projectile-command-map))
+
+;; Treemacs - file explorer
+(use-package nerd-icons)
+
+(use-package treemacs
+  :bind ("C-c T" . treemacs)
+  :config
+  (setq treemacs-width 30))
+
+(use-package treemacs-projectile
+  :after (treemacs projectile))
+
+(use-package treemacs-magit
+  :after (treemacs magit))
+
+;;; ==========================================================================
+;;; YAML / JSON / MARKDOWN
+;;; ==========================================================================
+
+(use-package yaml-mode
+  :mode "\\.ya?ml\\'")
+
+(use-package json-mode
+  :mode "\\.json\\'")
+
+(use-package markdown-mode
+  :mode (("\\.md\\'" . markdown-mode)
+         ("\\.markdown\\'" . markdown-mode))
+  :config
+  (setq markdown-command
+        (cond ((executable-find "pandoc") "pandoc")
+              ((executable-find "multimarkdown") "multimarkdown")
+              (t "markdown"))))
+
+;;; ==========================================================================
+;;; TERRAFORM
+;;; ==========================================================================
+
+(use-package terraform-mode
+  :mode "\\.tf\\'"
+  :hook (terraform-mode . lsp-deferred)
+  :config
+  (setq terraform-indent-level 2))
+
+;;; ==========================================================================
+;;; DOCKERFILE
+;;; ==========================================================================
+
+(use-package dockerfile-mode
+  :mode "Dockerfile\\'")
+
+;;; ==========================================================================
+;;; NIX
+;;; ==========================================================================
+
+(add-to-list
+ 'treesit-language-source-alist
+ '(nix "https://github.com/nix-community/tree-sitter-nix"))
+
+(when (treesit-available-p)
+  (add-to-list 'major-mode-remap-alist
+               '(nix-mode . nix-ts-mode)))
+
+(use-package nix-ts-mode
+  :mode "\\.nix\\'"
+  :hook ((nix-ts-mode . lsp-deferred)
+         (nix-ts-mode . flycheck-mode)
+         (nix-ts-mode . (lambda ()
+                          ;; Prefer nixd over nil — better diagnostics via Nix evaluator
+                          (setq-local lsp-enabled-clients '(nixd-lsp))
+                          (add-hook 'before-save-hook #'lsp-format-buffer nil t))))
+  :config
+  (with-eval-after-load 'flycheck
+    (flycheck-add-mode 'nix 'nix-ts-mode)))
+
+;; tree-sitter (external package — legacy API; Emacs 29+ also has treesit built-in above)
+(use-package tree-sitter
+  :defer t
+  :hook (tree-sitter-after-on . tree-sitter-hl-mode)
+  :config (global-tree-sitter-mode))
+
+;; envrc integrates direnv/.envrc with Emacs — essential for nix develop shells
+(use-package envrc
+  :config
+  (envrc-global-mode))
+
+;;; ==========================================================================
+;;; TIME, BATTERY, DIARY
+;;; ==========================================================================
+
+;; Display time in modeline
+(setq display-time-24hr-format t)
+(setq display-time-default-load-average nil)
+(display-time-mode 1)
+
+;; Display battery (useful for laptops)
+(when (and (fboundp 'battery-status-function)
+           (or my/is-macos my/is-linux
+               (and my/is-windows (not (null (getenv "ACPI"))))))
+  (display-battery-mode 1))
+
+;; Diary mode - integrates with org-agenda
+(setq diary-file "~/.diary")
+(setq calendar-mark-diary-entries-flag t)
+(add-hook 'calendar-today-visible-hook 'calendar-mark-today)
+
+;; Include diary entries in org-agenda
+(setq org-agenda-include-diary t)
+
+;;; ==========================================================================
+;;; CLAUDE CODE INTEGRATION (Optional)
+;;; ==========================================================================
+
+(defun my/claude-code ()
+  "Open a terminal with claude code ready."
+  (interactive)
+  (let ((default-directory (or (and (fboundp 'projectile-project-root)
+                                    (projectile-project-root))
+                               default-directory)))
+    (cond
+     (my/is-windows (async-shell-command "cmd /c claude" "*Claude Code*"))
+     (t (async-shell-command "claude" "*Claude Code*")))))
+
+(global-set-key (kbd "C-c C-a") 'my/claude-code)
+
+;; gptel for AI chat within Emacs (supports Claude API)
+(use-package gptel
+  :config
+  (setq gptel-model "claude-sonnet-4-6")
+  (setq gptel-backend
+        (gptel-make-anthropic "Claude"
+          :stream t
+          :key (lambda ()
+                 (or (getenv "ANTHROPIC_API_KEY")
+                     (auth-source-pick-first-password :host "api.anthropic.com")
+                     (read-passwd "Anthropic API key: "))))))
+
+(use-package gptel-agent
+  :after gptel)
+
+(use-package gptel-magit
+  :after (gptel magit))
+
+;;; ==========================================================================
+;;; KEYBINDINGS
+;;; ==========================================================================
+
+;; General
+(global-set-key (kbd "C-h") 'delete-backward-char)
+(global-set-key (kbd "C-w") 'backward-kill-word)
+(global-set-key (kbd "C-x k") 'kill-current-buffer)
+(global-set-key (kbd "C-x C-k") 'kill-region)
+(global-set-key (kbd "<escape>") 'keyboard-escape-quit)
+(global-set-key (kbd "C-c r") 'revert-buffer)
+(global-set-key (kbd "RET") 'newline-and-indent)
+
+(defun my-prog-mode-keys ()
+  "Custom key bindings for programming modes."
+  (local-set-key (kbd "RET") 'newline-and-indent)
+  (local-set-key (kbd "C-<backspace>") 'backward-delete-char-untabify))
+
+(add-hook 'prog-mode-hook 'my-prog-mode-keys)
+(add-hook 'makefile-mode-hook 'my-prog-mode-keys)
+(add-hook 'makefile-gmake-mode-hook 'my-prog-mode-keys)
+
+;; Help on F1 (since we remapped C-h)
+(global-set-key (kbd "<f1>") 'help-command)
+
+;; Window navigation
+(global-set-key (kbd "C-x o") 'other-window)
+(global-set-key (kbd "C-x C-b") 'ibuffer)
+
+;; Quick access
+(global-set-key (kbd "C-c e") (lambda () (interactive) (find-file user-init-file)))
+
+;;; ==========================================================================
+;;; C-c t PREFIX KEYMAP (terminal, todos, treemacs)
+;;; ==========================================================================
+
+(define-prefix-command 'my/ctrl-c-t-map)
+(global-set-key (kbd "C-c t") 'my/ctrl-c-t-map)
+
+;; Terminal
+(if my/is-windows
+    (define-key my/ctrl-c-t-map (kbd "t") 'eshell)
+  (define-key my/ctrl-c-t-map (kbd "t") 'vterm))
+
+;; hl-todo navigation
+(define-key my/ctrl-c-t-map (kbd "n") 'hl-todo-next)
+(define-key my/ctrl-c-t-map (kbd "p") 'hl-todo-previous)
+(define-key my/ctrl-c-t-map (kbd "o") 'hl-todo-occur)
+
+;; Treemacs (move from C-c T to C-c t r for "tree")
+(define-key my/ctrl-c-t-map (kbd "r") 'treemacs)
+
+;;; =========================================================================
+;;; SERVER MODE (Optional)
+;;; =========================================================================
+
+(require 'server)
+(unless (server-running-p)
+  (server-start))
+
+;; Ensure font is set when frame is ready
+(defun my/set-font-when-ready ()
+  "Set font, retrying if font list not yet populated."
+  (if (member "Consolas" (font-family-list))  ; Consolas always exists on Windows
+      (my/set-font)
+    (run-with-timer 0.5 nil #'my/set-font-when-ready)))
+
+(add-hook 'window-setup-hook #'my/set-font-when-ready)
+
+;; Also set font for emacsclient frames
+(add-hook 'server-after-make-frame-hook #'my/set-font)
+
+;;; =========================================================================
+;;; END OF INIT.EL
+;;; =========================================================================
+
+(provide 'init)
+;;; init.el ends here
+(custom-set-variables
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(custom-safe-themes
+   '("2b0fcc7cc9be4c09ec5c75405260a85e41691abb1ee28d29fcd5521e4fca575b"
+     "26e2e6cad9ec59b694a75f8e1f8e377174c4175d6f8d7829c343d4e6b45460e4"
+     default))
+ '(package-selected-packages
+   '(agent-shell circadian company-anaconda diff-hl dockerfile-mode
+		 embark-consult envrc flycheck git-gutter-fringe
+		 go-mode goto-last-change gptel-agent gptel-magit
+		 hl-todo json-mode lsp-ui marginalia modus-themes
+		 nerd-icons nix-ts-mode notmuch nyan-mode org-modern
+		 orgtbl-fit python-mode rainbow-delimiters
+		 rainbow-mode rustic smart-mode-line smartparens
+		 solarized-theme terraform-mode tree-sitter
+		 treemacs-magit treemacs-projectile vertico
+		 volatile-highlights whitespace-cleanup-mode yaml-mode)))
