@@ -13,6 +13,7 @@
     nodejs_22    # npm + claude-code dependency
     emacs
     kubecolor
+    gh
     notmuch
     isync    # provides mbsync
   ];

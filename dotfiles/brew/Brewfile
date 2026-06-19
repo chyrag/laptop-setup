@@ -1,0 +1,37 @@
+# ── CLI tools ─────────────────────────────────────────────────────────────────
+brew "tmux"
+brew "eza"
+brew "bat"
+brew "fd"
+brew "fzf"
+brew "ripgrep"
+brew "jq"
+brew "yq"
+brew "zoxide"
+brew "node"
+brew "gh"
+brew "notmuch"
+brew "isync"
+brew "starship"
+brew "direnv"
+brew "kubecolor"
+
+# ── Zsh plugins ───────────────────────────────────────────────────────────────
+brew "zsh-autosuggestions"
+brew "zsh-syntax-highlighting"
+brew "zsh-history-substring-search"
+
+# ── Docker / containers ───────────────────────────────────────────────────────
+brew "colima"
+brew "docker"
+brew "docker-compose"
+
+# ── GUI apps ──────────────────────────────────────────────────────────────────
+cask "ghostty"
+cask "rectangle"
+cask "brave-browser"
+cask "zoom"
+
+# ── Emacs (railwaycat's macOS-optimized build) ────────────────────────────────
+tap "railwaycat/emacsmacport"
+cask "emacs-mac"
