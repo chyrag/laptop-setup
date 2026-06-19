@@ -26,6 +26,9 @@ brew "colima"
 brew "docker"
 brew "docker-compose"
 
+# ── Fonts ─────────────────────────────────────────────────────────────────────
+cask "font-meslo-lg-nerd-font"
+
 # ── GUI apps ──────────────────────────────────────────────────────────────────
 cask "ghostty"
 cask "rectangle"

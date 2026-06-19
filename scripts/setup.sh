@@ -227,6 +227,21 @@ HEADER
         cat "$REPO_DIR/dotfiles/zsh/zshrc"
     } > "$HOME/.zshrc"
 
+    # Meslo LG Nerd Font
+    FONT_DIR="$HOME/.local/share/fonts/MesloNerdFont"
+    if [ ! -d "$FONT_DIR" ]; then
+        echo "==> Installing Meslo LG Nerd Font..."
+        NERD_VER=$(curl -sSf https://api.github.com/repos/ryanoasis/nerd-fonts/releases/latest \
+            | grep '"tag_name"' | sed 's/.*"v\([^"]*\)".*/\1/')
+        mkdir -p /tmp/meslo-install "$FONT_DIR"
+        curl -sSfLo /tmp/meslo-install/Meslo.zip \
+            "https://github.com/ryanoasis/nerd-fonts/releases/download/v${NERD_VER}/Meslo.zip"
+        unzip -q /tmp/meslo-install/Meslo.zip -d /tmp/meslo-install
+        mv /tmp/meslo-install/*.ttf "$FONT_DIR/"
+        rm -rf /tmp/meslo-install
+        fc-cache -f "$FONT_DIR"
+    fi
+
     echo ""
     echo "==> Linux: Docker daemon requires a system service."
     echo "    Enable now:          sudo systemctl enable --now docker"
