@@ -33,5 +33,5 @@ cask "brave-browser"
 cask "zoom"
 
 # ── Emacs (railwaycat's macOS-optimized build) ────────────────────────────────
-tap "railwaycat/emacsmacport"
+# Tap is added explicitly in setup.sh before brew bundle runs (required since Homebrew 4.4).
 cask "emacs-mac"

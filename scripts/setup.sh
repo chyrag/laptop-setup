@@ -39,6 +39,11 @@ if [ "$OS" = "Darwin" ]; then
         eval "$(/usr/local/bin/brew shellenv)"
     fi
 
+    # Third-party taps must be explicitly added before brew bundle can use them.
+    # Official homebrew-core and homebrew-cask are trusted by default.
+    echo "==> Adding third-party taps..."
+    NONINTERACTIVE=1 brew tap railwaycat/emacsmacport
+
     echo "==> Installing packages via Homebrew..."
     brew bundle --file="$REPO_DIR/dotfiles/brew/Brewfile"
 
