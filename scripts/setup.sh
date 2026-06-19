@@ -177,6 +177,18 @@ else
         sudo apt-get install -y nodejs
     fi
 
+    # kubectl (official Kubernetes apt repo)
+    if ! command -v kubectl &>/dev/null; then
+        echo "==> Installing kubectl..."
+        KUBECTL_MINOR=$(curl -sSL https://dl.k8s.io/release/stable.txt | grep -oE 'v[0-9]+\.[0-9]+')
+        sudo mkdir -p /etc/apt/keyrings
+        curl -fsSL "https://pkgs.k8s.io/core:/stable:/${KUBECTL_MINOR}/deb/Release.key" \
+            | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+        echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/${KUBECTL_MINOR}/deb/ /" \
+            | sudo tee /etc/apt/sources.list.d/kubernetes.list > /dev/null
+        sudo apt-get update -qq && sudo apt-get install -y kubectl
+    fi
+
     # Docker (official apt repo)
     if ! command -v docker &>/dev/null; then
         echo "==> Installing Docker..."

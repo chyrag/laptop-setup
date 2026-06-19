@@ -15,6 +15,7 @@ brew "isync"
 brew "starship"
 brew "direnv"
 brew "kubecolor"
+brew "kubectl"
 
 # ── Zsh plugins ───────────────────────────────────────────────────────────────
 brew "zsh-autosuggestions"
