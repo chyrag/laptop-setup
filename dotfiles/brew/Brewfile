@@ -32,6 +32,5 @@ cask "rectangle"
 cask "brave-browser"
 cask "zoom"
 
-# ── Emacs (railwaycat's macOS-optimized build) ────────────────────────────────
-# Tap is added explicitly in setup.sh before brew bundle runs (required since Homebrew 4.4).
-cask "emacs-mac"
+# ── Emacs ─────────────────────────────────────────────────────────────────────
+cask "emacs"
